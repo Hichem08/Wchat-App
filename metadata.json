@@ -1,0 +1,6 @@
+{
+  "name": "Wchat - Real-Time Mobile Messaging",
+  "description": "A modern mobile messaging application with dark purple neon aesthetic, multi-language support (English, French, Arabic RTL), voice messages, simulated calls, and 24h message auto-deletion.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
