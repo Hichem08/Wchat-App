@@ -11,12 +11,12 @@ import { authenticateSocket } from './middleware/auth.js';
 import { setupSocketHandlers } from './socket/socketHandler.js';
 import { startMessageCleanupJob } from './jobs/messageCleanupJob.js';
 
-dotenv.config();
+dotenv.config({ override: true });
 
 const app = express();
 const server = http.createServer(app);
 
-const PORT = process.env.PORT || 4000;
+const PORT = process.env.SOCKET_PORT || (process.env.PORT && process.env.PORT !== '8080' ? process.env.PORT : 4000);
 const CLIENT_URL = process.env.CLIENT_URL || '*';
 
 // Express Middleware

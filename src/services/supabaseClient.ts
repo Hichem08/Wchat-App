@@ -4,16 +4,18 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl =
   (typeof process !== 'undefined' && process.env?.EXPO_PUBLIC_SUPABASE_URL) ||
   (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_SUPABASE_URL) ||
-  'https://your-supabase-project.supabase.co';
+  'https://tpfdzrqlanumduiyxwmc.supabase.co';
 
 const supabaseAnonKey =
   (typeof process !== 'undefined' && process.env?.EXPO_PUBLIC_SUPABASE_ANON_KEY) ||
   (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_SUPABASE_ANON_KEY) ||
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.placeholder-anon-key';
+  'sb_publishable_oaIHKFoUsjPvHTBjILCa7Q_fpkHhaiY';
 
 export const isSupabaseConfigured = (): boolean => {
   return (
+    Boolean(supabaseUrl) &&
     !supabaseUrl.includes('your-supabase-project') &&
+    Boolean(supabaseAnonKey) &&
     !supabaseAnonKey.includes('placeholder-anon-key')
   );
 };
