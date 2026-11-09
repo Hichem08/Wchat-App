@@ -1,112 +1,153 @@
-# Wchat - Real-Time Mobile Messaging Application
+# Wchat - Real-Time Mobile Messaging Application (Phase 2 Full-Stack)
 
 > "Real-time conversations, closer than ever."
 
-Wchat is a mobile messaging application designed with a dark purple neon identity, multi-language support (**English**, **Français**, and **العربية with full RTL layout**), interactive voice notes, simulated voice/video calls, and a 24-hour message auto-deletion architecture.
+Wchat is a modern real-time mobile messaging application with a signature glowing purple visual identity, complete internationalization (**English**, **Français**, and **العربية with full RTL layout**), real-time WebSocket messaging, 24-hour disappearing messages, and Supabase integration.
 
 ---
 
-## 🎨 Visual Identity & Reference Design
-- **Background**: Deep Dark `#080810`
-- **Primary Surfaces**: `#121221` and `#1B1A2B`
-- **Neon Accents**: Vibrant Purple `#8B3DFF` & Bright Violet `#B98AFF`
-- **Typography**: Plus Jakarta Sans & Tajawal (Arabic)
-- **Status & Badges**: Glowing neon dots, audio waveforms, rounded pill controls
+## 🏗️ Architecture Overview
 
----
-
-## 📱 Project Structure
+The Wchat ecosystem consists of 3 integrated layers:
 
 ```
-├── app.json                  # Expo mobile application configuration
-├── babel.config.js           # Babel resolver configuration
-├── package.json              # Dependencies and scripts
-├── src/
-│   ├── components/
-│   │   ├── WchatLogo.tsx     # Stylized glowing purple W logo
-│   │   ├── Avatar.tsx        # Avatar with online badge & glowing ring
-│   │   ├── ChatItem.tsx      # Conversation list row with unread badges
-│   │   ├── MessageBubble.tsx # Outgoing/incoming bubbles, voice waveform & 24h tag
-│   │   ├── SearchBar.tsx     # Rounded search input with RTL support
-│   │   ├── BottomNav.tsx     # Chats, Contacts, Discover, Profile navigation
-│   │   ├── AttachmentSheet.tsx # 6 file attachment options (Photo, Camera, PDF, Doc, Audio, GPS)
-│   │   ├── CallModal.tsx     # Immersive voice & video call overlay
-│   │   └── DeviceFrame.tsx   # Mobile phone simulator with status bar & controls
-│   ├── screens/
-│   │   ├── WelcomeScreen.tsx # Splash / welcome with neon W logo & language selector
-│   │   ├── LoginScreen.tsx   # Login with Google & Supabase social buttons
-│   │   ├── SignupScreen.tsx  # Registration with name, email, phone, matricule, password
-│   │   ├── LanguageScreen.tsx # Choose your language (English, Français, العربية)
-│   │   ├── HomeScreen.tsx    # Chats, Groups, Calls tabs & search
-│   │   ├── ChatConversationScreen.tsx # Active chat, voice notes, attachments, call buttons
-│   │   ├── NewMessageScreen.tsx # Search by name, matricule (2025001), or phone
-│   │   ├── CreateGroupScreen.tsx # Create group with photo, name, description, and members
-│   │   ├── ContactsScreen.tsx # All contacts, online friends filter, direct message & call
-│   │   ├── DiscoverScreen.tsx # People you may know, suggested groups, active users
-│   │   ├── ProfileScreen.tsx # Profile details, matricule, edit mode, language, logout
-│   │   └── SettingsScreen.tsx # Language selector, notifications, 24h auto-delete, dark mode
-│   ├── navigation/
-│   │   └── AppNavigator.tsx  # Dynamic screen transitions & modal management
-│   ├── context/
-│   │   ├── ThemeContext.tsx  # Centralized dark/light mode provider
-│   │   ├── LanguageContext.tsx # i18n & RTL provider
-│   │   ├── AuthContext.tsx   # User profile, login, registration, logout
-│   │   └── ChatContext.tsx   # Chats, messaging, voice notes, group creation, simulated calls
-│   ├── services/
-│   │   ├── authService.ts    # Future Supabase Auth integration interface
-│   │   ├── chatService.ts    # Future Socket.IO room & typing integration interface
-│   │   ├── userService.ts    # Future Supabase Profiles & contacts sync interface
-│   │   ├── messageService.ts # Future Socket.IO messaging & Supabase storage interface
-│   │   └── callService.ts    # Future WebRTC audio/video calling interface
-│   ├── constants/
-│   │   └── mockData.ts       # Realistic mock data (Sarah, Ahmed, Emma, Omar, Hichem)
-│   ├── i18n/
-│   │   └── translations.ts   # English, French, Arabic RTL dictionaries
-│   ├── theme/
-│   │   ├── colors.ts         # Color palette definitions
-│   │   └── theme.ts          # Centralized theme hook
-│   └── types/
-│       └── index.ts          # Full TypeScript models
+wchat/
+├── supabase/migrations/      # Supabase PostgreSQL schema, RLS policies, triggers & buckets
+│   ├── 001_initial_schema.sql
+│   ├── 002_rls_policies.sql
+│   ├── 003_functions.sql
+│   └── 004_storage.sql
+├── server/                   # Node.js + Express + Socket.IO Backend Server
+│   ├── src/
+│   │   ├── config/supabase.ts        # Supabase Service Role client
+│   │   ├── middleware/auth.ts        # Supabase JWT validator for REST & Sockets
+│   │   ├── jobs/messageCleanupJob.ts # 24h message auto-deletion cron runner
+│   │   ├── socket/socketHandler.ts   # Real-time rooms, typing, presence & WebRTC signaling
+│   │   ├── routes/                   # REST endpoints (/health, /api/chats, /friends, etc.)
+│   │   └── server.ts                 # HTTP + WebSocket listener
+│   ├── .env.example
+│   └── package.json
+├── expo-wchat/               # Standalone React Native / Expo Mobile App
+│   ├── App.tsx
+│   ├── app.json
+│   └── package.json
+└── src/                      # AI Studio Web Preview with Mobile Frame & QR Export
+    ├── context/              # ChatContext, AuthContext, ThemeContext, LanguageContext
+    ├── services/             # Supabase & Socket.IO client services
+    ├── screens/              # All 11 pixel-perfect screens matching the reference design
+    └── components/           # Reusable UI widgets with glowing neon styling
 ```
 
 ---
 
-## 🚀 How to Run on Android with Expo Go
+## 🗄️ Supabase Database Setup
 
-1. **Install Expo Go** on your Android smartphone from the Google Play Store.
-2. In the project root, install packages and start Expo:
+Run the migrations in your Supabase project in numerical order under **SQL Editor**:
+
+1. `001_initial_schema.sql`:
+   - `profiles`: id, full_name, email, phone, matricule, avatar_url, is_online, last_seen.
+   - `friendships`: user_id, friend_id, status ('pending', 'accepted', 'blocked').
+   - `chats`: id, type ('direct', 'group'), name, description, avatar_url.
+   - `chat_members`: chat_id, user_id, role.
+   - `messages`: id, chat_id, sender_id, type ('text', 'voice', 'image', 'file', 'location'), content, media_url, expires_at (default `now() + interval '24 hours'`).
+   - `message_reads`: message_id, user_id, read_at.
+   - `notifications`: user_id, title, body, type, is_read.
+   - `calls`: caller_id, receiver_id, chat_id, type, status, duration.
+
+2. `002_rls_policies.sql`:
+   - Row Level Security enabled across all tables.
+   - Users can only read messages in chats where they are verified members.
+   - Profile self-update policies.
+
+3. `003_functions.sql`:
+   - `handle_new_user()` trigger auto-creates profile on `auth.users` sign-up.
+   - `cleanup_expired_messages()` function that deletes records where `expires_at < now()`.
+   - `get_or_create_private_chat()` function for 1-on-1 conversations.
+
+4. `004_storage.sql`:
+   - Configures storage buckets: `avatars`, `chat-files`, `chat-images`, `chat-audio`.
+   - Storage RLS access policies.
+
+---
+
+## 🚀 Running the Node.js / Socket.IO Server
+
+1. Navigate to the server folder:
    ```bash
+   cd server
    npm install
-   npx expo start
    ```
-3. A QR code will display in the terminal.
-4. Open the **Expo Go** app on your phone and tap **Scan QR code**.
-5. Wchat will open natively on your device.
+
+2. Copy the environment variables:
+   ```bash
+   cp .env.example .env
+   ```
+   Fill in your Supabase credentials:
+   ```env
+   PORT=4000
+   SUPABASE_URL=https://your-project.supabase.co
+   SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-role-key
+   CLIENT_URL=http://localhost:3000
+   ```
+
+3. Run in development mode:
+   ```bash
+   npm run dev
+   ```
+
+The server listens on port `4000` (or `PORT`), serving:
+- `GET /health`: Health check and timestamp.
+- Socket.IO connection at `/socket.io/`.
+- 24-hour cleanup cron runner active every 10 minutes.
 
 ---
 
-## 🧪 Testing All Interactive Features
+## 📱 Running on Android with Expo Go
 
-1. **Welcome & Authentication**:
-   - Tap **Get Started** to open Sign Up (supports full name, email, phone, matricule, password).
-   - Tap **Log In** to open Log In (includes simulated Google & Supabase buttons).
-   - Submitting signs you in and opens the home chat list.
-2. **Messaging & Voice Notes**:
-   - Tap any conversation (e.g. **Sarah Johnson**).
-   - Type a message and tap the purple Send button. Notice how Sarah automatically sends a friendly reply after 1.5s!
-   - Tap the **Microphone** icon to record and send an interactive voice note bubble with waveform. Tap the play button on any voice note to see animated playback.
-   - Tap the **Attachment** (paperclip) icon to open the 6-item Send File grid (Photo, Camera, Document, PDF, Audio, Location). Selecting any option sends the attachment.
-3. **Simulated Voice & Video Calls**:
-   - Inside any conversation or from the Contacts / Calls tab, tap the **Phone** or **Video** icon.
-   - The full-screen call screen opens with timer, pulsating audio rings, Mute toggle, Speaker toggle, Video camera switch, and red End Call button.
-4. **Multi-Language & Arabic RTL**:
-   - Switch language at any time from the top bar, Profile, or Settings (select **العربية**).
-   - The entire layout immediately inverts to Right-To-Left (RTL), text aligns to the right, and Arabic copy is displayed.
-5. **Dark Mode & Light Mode**:
-   - Go to Settings or click the Sun/Moon toggle in the top bar to switch between Dark `#080810` and Light themes dynamically.
-6. **Group Creation**:
-   - Go to Home > Groups tab > tap **Create Group** (or "+").
-   - Enter group name, description, select/deselect members, and tap Create. The group will appear in your conversations.
-7. **Find Friends & Matricule Search**:
-   - Tap the edit icon on the home screen to open **New Message**.
-   - Search by name or type `2025` to filter by student matricule.
+1. In `expo-wchat/`:
+   ```bash
+   cd expo-wchat
+   npm install
+   ```
+
+2. Configure environment:
+   ```bash
+   cp .env.example .env
+   ```
+   Set your computer's local Wi-Fi IP address so your Android phone can reach the backend:
+   ```env
+   EXPO_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+   EXPO_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+   EXPO_PUBLIC_SOCKET_SERVER_URL=http://192.168.1.XX:4000
+   ```
+
+3. Start Expo:
+   ```bash
+   npx expo start --clear
+   ```
+
+4. Scan the QR code using the **Expo Go** app on your Android smartphone.
+
+---
+
+## ⏳ 24-Hour Message Auto-Delete Workflow
+
+1. When any message is inserted into Supabase, the default column constraint sets:
+   `expires_at = now() + interval '24 hours'`
+2. When querying messages in `messageService.ts`, only active messages are fetched:
+   `.gt('expires_at', new Date().toISOString())`
+3. The Node.js server background job (`messageCleanupJob.ts`) runs every 10 minutes, calling `supabase.rpc('cleanup_expired_messages')` or issuing a direct delete to prune expired rows and keep storage lightweight.
+4. The client UI renders a subtle ⏳ indicator reflecting the 24-hour ephemeral lifecycle.
+
+---
+
+## 📞 WebRTC Audio & Video Calling
+
+- `socketHandler.ts` handles WebRTC signaling events:
+  - `call_offer`: Transmits SDP offer with caller ID, media type, and caller name.
+  - `call_answer`: Transmits SDP answer back to caller.
+  - `ice_candidate`: Exchanges network candidate pairs.
+  - `call_end` / `call_reject`: Cleans up active call session.
+- Client implementation:
+  - Inside the browser and Expo preview, an interactive simulation with live timer, active waveforms, mute/speaker toggles, and camera view is fully functional.
+  - In a bare React Native production binary, `react-native-webrtc` is used via Expo Development Builds (`npx expo run:android`) as standard Expo Go does not package native C++ WebRTC binaries.

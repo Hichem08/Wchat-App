@@ -1,9 +1,4 @@
-/**
- * @file authService.ts
- * Future Backend Integration: Supabase Authentication
- * Ready for Supabase Auth (`supabase.auth.signUp`, `supabase.auth.signInWithPassword`, `supabase.auth.signOut`)
- */
-
+import { supabase, isSupabaseConfigured } from './supabaseClient';
 import { User } from '../types';
 
 export interface AuthResponse {
@@ -13,9 +8,48 @@ export interface AuthResponse {
 }
 
 export const authService = {
-  async signUp(email: string, password: string, metadata: { fullName: string; phone: string; matricule?: string }): Promise<AuthResponse> {
-    // TODO: Connect with `supabase.auth.signUp({ email, password, options: { data: metadata } })`
-    console.log('[authService] signUp mock called with:', email, metadata);
+  async signUp(
+    email: string,
+    password: string,
+    metadata: { fullName: string; phone: string; matricule?: string }
+  ): Promise<AuthResponse> {
+    if (isSupabaseConfigured()) {
+      try {
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              full_name: metadata.fullName,
+              phone: metadata.phone,
+              matricule: metadata.matricule,
+            },
+          },
+        });
+
+        if (error) {
+          return { user: null, error: error.message };
+        }
+
+        const authUser = data.user;
+        const user: User = {
+          id: authUser?.id || 'user_' + Date.now(),
+          name: metadata.fullName,
+          email,
+          phone: metadata.phone,
+          matricule: metadata.matricule,
+          avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80',
+          isOnline: true,
+          statusText: 'Living the future with Wchat 💜',
+        };
+
+        return { user, token: data.session?.access_token };
+      } catch (err: any) {
+        return { user: null, error: err.message };
+      }
+    }
+
+    // Local state fallback for immediate testing
     return {
       user: {
         id: 'user_' + Date.now(),
@@ -25,14 +59,49 @@ export const authService = {
         matricule: metadata.matricule,
         avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80',
         isOnline: true,
+        statusText: 'Living the future with Wchat 💜',
       },
       token: 'mock_jwt_token_' + Date.now(),
     };
   },
 
-  async logIn(emailOrPhone: string, _password?: string): Promise<AuthResponse> {
-    // TODO: Connect with `supabase.auth.signInWithPassword(...)`
-    console.log('[authService] logIn mock called with:', emailOrPhone);
+  async logIn(emailOrPhone: string, password?: string): Promise<AuthResponse> {
+    if (isSupabaseConfigured() && emailOrPhone.includes('@') && password) {
+      try {
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: emailOrPhone,
+          password,
+        });
+
+        if (error) {
+          return { user: null, error: error.message };
+        }
+
+        // Fetch profile
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', data.user.id)
+          .single();
+
+        const user: User = {
+          id: data.user.id,
+          name: profile?.full_name || data.user.user_metadata?.full_name || 'Hichem Bendali',
+          email: data.user.email,
+          phone: profile?.phone || '+33 6 12 34 56 78',
+          matricule: profile?.matricule || '2025005',
+          avatar: profile?.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80',
+          isOnline: true,
+          statusText: profile?.bio || 'Living the future with Wchat 💜',
+        };
+
+        return { user, token: data.session?.access_token };
+      } catch (err: any) {
+        return { user: null, error: err.message };
+      }
+    }
+
+    // Local demo login fallback
     return {
       user: {
         id: 'user_current',
@@ -42,19 +111,22 @@ export const authService = {
         matricule: '2025005',
         avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80',
         isOnline: true,
+        statusText: 'Living the future with Wchat 💜',
       },
       token: 'mock_jwt_token_' + Date.now(),
     };
   },
 
   async logOut(): Promise<void> {
-    // TODO: Connect with `supabase.auth.signOut()`
-    console.log('[authService] logOut mock called');
+    if (isSupabaseConfigured()) {
+      await supabase.auth.signOut();
+    }
   },
 
-  async resetPassword(email: string): Promise<{ success: boolean; message: string }> {
-    // TODO: Connect with `supabase.auth.resetPasswordForEmail(email)`
-    console.log('[authService] resetPassword called for:', email);
-    return { success: true, message: 'Password reset link sent' };
+  async getSession() {
+    if (isSupabaseConfigured()) {
+      return await supabase.auth.getSession();
+    }
+    return { data: { session: null }, error: null };
   },
 };

@@ -1,0 +1,1712 @@
+You are a senior full-stack mobile application architect and developer.
+
+We already have an existing React Native Expo + TypeScript application called Wchat.
+
+IMPORTANT:
+This is PHASE 2 of the project.
+
+Do NOT rebuild the frontend from scratch.
+
+Do NOT replace the existing UI.
+
+Do NOT remove the existing screens, navigation, dark/light mode, English/French/Arabic support, RTL support, animations, or Wchat visual identity.
+
+Instead, take the existing Wchat React Native project and transform it from a frontend prototype into a functional real-time messaging application.
+
+==========================================================
+PROJECT OBJECTIVE
+==========================================================
+
+Wchat is a modern real-time messaging application inspired by Messenger, Discord and WhatsApp.
+
+The existing frontend already contains:
+
+- Welcome screen
+- Sign Up
+- Login
+- Chats
+- Chat conversation
+- Contacts
+- Find Friends
+- Groups
+- Profile
+- Settings
+- Voice call UI
+- Video call UI
+- Attachment UI
+- Dark mode
+- Light mode
+- English
+- French
+- Arabic
+- RTL support
+- Message composer
+- Voice message UI
+- 24-hour message deletion UI
+- Wchat black/purple visual identity
+
+Now make the application functional.
+
+Architecture:
+
+React Native / Expo
+        |
+        | HTTPS
+        | Supabase SDK
+        v
+Supabase
+  ├── Authentication
+  ├── PostgreSQL Database
+  └── Storage
+
+React Native
+        |
+        | WebSocket
+        v
+Node.js + Express + Socket.IO
+        |
+        └── Real-time messaging/events
+
+React Native
+        |
+        | WebRTC
+        v
+Voice / Video Calls
+
+==========================================================
+1. TECHNOLOGY STACK
+==========================================================
+
+Mobile:
+
+- React Native
+- Expo
+- TypeScript
+- React Navigation
+- Expo Secure Store
+- AsyncStorage where appropriate
+- Supabase JavaScript SDK
+- Socket.IO Client
+- WebRTC-compatible React Native/Expo solution
+- Expo Notifications
+- Expo Audio / Camera / File System where appropriate
+
+Backend:
+
+- Node.js
+- Express.js
+- Socket.IO
+- TypeScript if practical
+- dotenv
+- CORS
+- JWT/Supabase authentication verification
+
+Database:
+
+- Supabase PostgreSQL
+
+Storage:
+
+- Supabase Storage
+
+Authentication:
+
+- Supabase Auth
+
+Do NOT use another database.
+
+Do NOT introduce Firebase.
+
+==========================================================
+2. IMPORTANT SECURITY RULE
+==========================================================
+
+Never expose Supabase service-role keys inside the React Native application.
+
+The mobile application may contain:
+
+SUPABASE_URL
+SUPABASE_ANON_KEY
+
+using environment variables.
+
+The Supabase service-role key MUST ONLY exist on the secure backend/server if it is actually required.
+
+Never put:
+
+SUPABASE_SERVICE_ROLE_KEY
+
+inside React Native.
+
+Never commit secrets to Git.
+
+Create appropriate:
+
+.env.example
+
+files.
+
+==========================================================
+3. SUPABASE PROJECT CONFIGURATION
+==========================================================
+
+Create a clear Supabase database design.
+
+We need the following tables.
+
+------------------------------------------
+profiles
+------------------------------------------
+
+id
+uuid
+references auth.users.id
+
+Fields:
+
+id
+full_name
+username
+email
+phone
+matricule
+avatar_url
+bio
+language
+is_online
+last_seen
+created_at
+updated_at
+
+The profile must be automatically created after registration.
+
+------------------------------------------
+friendships
+------------------------------------------
+
+id
+requester_id
+receiver_id
+status
+
+Possible status:
+
+pending
+accepted
+blocked
+
+created_at
+updated_at
+
+Users must be able to send and accept friend requests.
+
+------------------------------------------
+chats
+------------------------------------------
+
+id
+type
+
+Possible values:
+
+private
+group
+
+name
+avatar_url
+created_by
+created_at
+updated_at
+
+------------------------------------------
+chat_members
+------------------------------------------
+
+id
+chat_id
+user_id
+role
+
+Possible roles:
+
+member
+admin
+
+created_at
+
+------------------------------------------
+messages
+------------------------------------------
+
+id
+chat_id
+sender_id
+content
+message_type
+
+Possible types:
+
+text
+image
+video
+audio
+voice
+file
+pdf
+location
+
+file_url
+file_name
+file_size
+mime_type
+
+reply_to_message_id
+
+created_at
+expires_at
+
+deleted_at
+
+is_read
+
+created_at
+
+For normal messages:
+
+expires_at = created_at + 24 hours
+
+------------------------------------------
+message_reads
+------------------------------------------
+
+id
+message_id
+user_id
+read_at
+
+------------------------------------------
+notifications
+------------------------------------------
+
+id
+user_id
+type
+title
+body
+data
+is_read
+created_at
+
+------------------------------------------
+calls
+------------------------------------------
+
+id
+caller_id
+receiver_id
+chat_id
+type
+
+voice
+video
+
+status
+
+calling
+ringing
+accepted
+rejected
+ended
+missed
+
+started_at
+ended_at
+created_at
+
+==========================================================
+4. SUPABASE ROW LEVEL SECURITY
+==========================================================
+
+Enable RLS on all sensitive tables.
+
+Users must only be able to access data they are authorized to access.
+
+Examples:
+
+A user can read their own profile.
+
+A user can update their own profile.
+
+A user can read conversations where they are a member.
+
+A user can read messages belonging to conversations where they are a member.
+
+A user can send messages only as themselves.
+
+Users cannot modify another user's messages.
+
+Users can delete their own messages where appropriate.
+
+Users cannot access private conversations they are not members of.
+
+Do NOT disable RLS just to make the application work.
+
+Create proper SQL migration files.
+
+For example:
+
+supabase/migrations/
+
+001_initial_schema.sql
+002_rls_policies.sql
+003_functions.sql
+004_storage.sql
+
+==========================================================
+5. SUPABASE AUTHENTICATION
+==========================================================
+
+Replace the current mock authentication.
+
+Implement real Supabase authentication.
+
+Sign Up:
+
+Full name
+Email
+Phone
+Matricule
+Password
+
+Use Supabase Auth.
+
+After registration:
+
+1. Create auth user.
+2. Create profile.
+3. Save profile information.
+4. Navigate to the application.
+
+Login:
+
+Email/password
+
+Keep the existing Wchat login UI.
+
+Logout:
+
+Use Supabase signOut().
+
+Persist the authentication session.
+
+When the application starts:
+
+Check whether a Supabase session exists.
+
+If authenticated:
+
+open MainNavigator.
+
+If not:
+
+open AuthNavigator.
+
+Do NOT store passwords locally.
+
+==========================================================
+6. PHONE NUMBER
+==========================================================
+
+Phone numbers should be stored in the profile.
+
+The application should allow searching users by:
+
+name
+username
+matricule
+phone
+
+Do not expose unnecessary private information.
+
+==========================================================
+7. USER PROFILE
+==========================================================
+
+Connect the existing profile screen to Supabase.
+
+Users should be able to:
+
+change full name
+change avatar
+change bio
+change phone
+change language
+change profile information
+
+Avatar images should be stored in Supabase Storage.
+
+Storage bucket:
+
+avatars
+
+Update avatar_url in profiles.
+
+==========================================================
+8. FRIEND SYSTEM
+==========================================================
+
+Implement:
+
+Search users.
+
+Send friend request.
+
+Accept friend request.
+
+Reject friend request.
+
+Remove friend.
+
+Block user.
+
+Display:
+
+Friends
+Pending requests
+Online friends
+
+Use Supabase database operations.
+
+The existing "Find Friends" screen must become functional.
+
+Search by:
+
+Name
+Matricule
+Phone
+Username
+
+==========================================================
+9. CHAT CREATION
+==========================================================
+
+When two users become friends and start a conversation:
+
+Create a private chat.
+
+Insert both users into:
+
+chat_members
+
+The chat must persist in Supabase.
+
+Do not create duplicate private chats between the same two users.
+
+==========================================================
+10. REAL-TIME MESSAGING
+==========================================================
+
+This is one of the most important requirements.
+
+Implement real-time messaging using:
+
+Node.js
+Express
+Socket.IO
+
+The React Native application must connect to the Socket.IO server after authentication.
+
+Example architecture:
+
+Mobile A
+   |
+Socket.IO
+   |
+Node.js
+   |
+Socket.IO
+   |
+Mobile B
+
+When User A sends a message:
+
+1. React Native sends the message to Node.js via Socket.IO.
+2. Node.js authenticates the user.
+3. Node.js validates the chat membership.
+4. Node.js saves the message to Supabase.
+5. Node.js emits the message event to the appropriate chat room.
+6. User B receives the message instantly.
+7. User A receives the server-confirmed message.
+
+Do NOT rely exclusively on local state.
+
+==========================================================
+11. SOCKET.IO EVENTS
+==========================================================
+
+Create a clean event system.
+
+Examples:
+
+connection
+disconnect
+
+authenticate
+
+join_chat
+leave_chat
+
+send_message
+new_message
+
+message_delivered
+message_read
+
+typing_start
+typing_stop
+
+user_online
+user_offline
+
+friend_request
+friend_request_accepted
+
+notification
+
+call_offer
+call_answer
+ice_candidate
+call_end
+
+Use TypeScript types for Socket.IO events.
+
+Create something similar to:
+
+socketEvents.ts
+
+so event names are centralized.
+
+==========================================================
+12. CHAT ROOMS
+==========================================================
+
+Each conversation should have a Socket.IO room.
+
+Example:
+
+chat:<chatId>
+
+When entering a conversation:
+
+socket.emit("join_chat", chatId)
+
+When leaving:
+
+socket.emit("leave_chat", chatId)
+
+Messages must only be broadcast to users in the appropriate chat room.
+
+==========================================================
+13. ONLINE / OFFLINE STATUS
+==========================================================
+
+Implement real online presence.
+
+When a user connects:
+
+Set:
+
+profiles.is_online = true
+
+Update:
+
+last_seen
+
+When disconnected:
+
+Set:
+
+is_online = false
+
+Update:
+
+last_seen
+
+Display online status in the existing UI.
+
+Examples:
+
+● Online
+
+Last seen 5 min ago
+
+Typing...
+
+==========================================================
+14. TYPING INDICATOR
+==========================================================
+
+Implement real-time typing indicators.
+
+When User A types:
+
+typing_start
+
+Send event to chat room.
+
+User B should see:
+
+"Sarah is typing..."
+
+When typing stops:
+
+typing_stop
+
+Remove the indicator.
+
+Do not save typing events in the database.
+
+==========================================================
+15. MESSAGE READ RECEIPTS
+==========================================================
+
+Implement:
+
+sent
+delivered
+read
+
+When the recipient opens a message:
+
+send message_read
+
+Update the database.
+
+Display appropriate read indicators in the UI.
+
+==========================================================
+16. 24-HOUR MESSAGE DELETION
+==========================================================
+
+This requirement is mandatory.
+
+Messages must automatically disappear after 24 hours.
+
+When creating a message:
+
+created_at = current time
+
+expires_at = created_at + 24 hours
+
+Do not depend only on React Native timers.
+
+The server/database must enforce cleanup.
+
+Create a secure server-side cleanup mechanism.
+
+Possible implementation:
+
+Node.js scheduled cleanup job
+
+or Supabase scheduled function/pg_cron if available.
+
+Every expired message should be removed or logically deleted.
+
+Do not allow expired messages to continue appearing after the application restarts.
+
+The frontend should also filter expired messages.
+
+==========================================================
+17. TEXT MESSAGES
+==========================================================
+
+The existing message composer must send real messages.
+
+When pressing Send:
+
+Validate content.
+
+Create message.
+
+Send via Socket.IO.
+
+Persist in Supabase.
+
+Display immediately.
+
+Handle:
+
+loading
+failed
+retry
+
+Do not duplicate messages.
+
+Use unique message IDs.
+
+==========================================================
+18. IMAGE / FILE MESSAGES
+==========================================================
+
+Implement real attachments.
+
+Use:
+
+Supabase Storage
+
+Buckets:
+
+avatars
+chat-files
+chat-images
+chat-audio
+
+When a user selects an image/file:
+
+1. Pick the file.
+2. Validate type and size.
+3. Upload to Supabase Storage.
+4. Get storage URL.
+5. Create message record.
+6. Send message through Socket.IO.
+7. Display attachment in the chat.
+
+Support:
+
+JPG
+PNG
+WEBP
+PDF
+DOC
+DOCX
+TXT
+ZIP where appropriate
+
+Add file-size validation.
+
+Show upload progress if possible.
+
+==========================================================
+19. IMAGE MESSAGE UI
+==========================================================
+
+Images should appear directly inside the conversation.
+
+Clicking an image should open a full-screen image viewer.
+
+Keep the Wchat visual style.
+
+==========================================================
+20. PDF / DOCUMENT UI
+==========================================================
+
+For documents show:
+
+file icon
+file name
+file size
+download/open button
+
+PDF messages should have a PDF-style icon.
+
+==========================================================
+21. VOICE MESSAGES
+==========================================================
+
+Implement real voice recording.
+
+Use a compatible Expo audio library.
+
+The microphone button should:
+
+Start recording.
+
+Stop recording.
+
+Upload audio to Supabase Storage.
+
+Create a message.
+
+Send through Socket.IO.
+
+Display:
+
+Play
+Pause
+Waveform
+Duration
+
+Use:
+
+message_type = voice
+
+Audio files should eventually also respect the 24-hour message expiration rule.
+
+==========================================================
+22. CAMERA
+==========================================================
+
+Use the appropriate Expo camera/image picker APIs.
+
+Users should be able to:
+
+Take a photo.
+
+Select a photo from gallery.
+
+Send it in chat.
+
+Handle permissions correctly.
+
+If permission is denied, show a friendly message.
+
+==========================================================
+23. LOCATION
+==========================================================
+
+The attachment menu includes Location.
+
+Implement location sharing architecture.
+
+The user can choose to share their current location.
+
+Store appropriate location information in the message.
+
+Do not expose location data to unauthorized users.
+
+If actual GPS implementation creates Expo compatibility issues, isolate it in:
+
+locationService.ts
+
+so it can be completed without changing the rest of the application.
+
+==========================================================
+24. VOICE CALLS
+==========================================================
+
+Implement real one-to-one voice calls using WebRTC.
+
+Architecture:
+
+Caller
+ |
+WebRTC
+ |
+Signaling through Socket.IO
+ |
+Receiver
+
+Socket.IO should handle signaling only.
+
+WebRTC should handle media.
+
+Do NOT send audio through Socket.IO.
+
+Call flow:
+
+User A presses Voice Call.
+
+Server notifies User B.
+
+User B receives incoming call screen.
+
+User B:
+
+Accept
+
+or
+
+Reject
+
+If accepted:
+
+WebRTC peer connection starts.
+
+Exchange:
+
+offer
+answer
+ICE candidates
+
+Audio stream starts.
+
+Controls:
+
+Mute
+Speaker
+End call
+
+Update calls table.
+
+When call ends:
+
+save:
+
+ended_at
+
+status = ended
+
+==========================================================
+25. VIDEO CALLS
+==========================================================
+
+Implement one-to-one video calls using WebRTC.
+
+Same signaling architecture.
+
+Controls:
+
+Mute microphone
+Camera ON/OFF
+Switch camera
+Speaker
+End call
+
+Display remote video full screen.
+
+Display local video preview.
+
+Handle:
+
+camera permission
+microphone permission
+call rejection
+call timeout
+network disconnection
+
+==========================================================
+26. WEBRTC / EXPO COMPATIBILITY
+==========================================================
+
+This project must remain compatible with the actual Expo workflow.
+
+Before adding a WebRTC dependency:
+
+CHECK whether the required package works with the current Expo SDK.
+
+If native WebRTC functionality cannot work inside standard Expo Go, DO NOT pretend that it works.
+
+Instead:
+
+1. Keep the WebRTC architecture.
+2. Create the call/signaling interfaces.
+3. Clearly document the native development build requirement.
+4. Provide the exact commands needed for an Expo Development Build if necessary.
+
+Do not break the rest of the application just to force WebRTC into Expo Go.
+
+==========================================================
+27. PUSH NOTIFICATIONS
+==========================================================
+
+Prepare real push notifications.
+
+Notifications should eventually support:
+
+new message
+friend request
+friend request accepted
+incoming call
+
+Use Expo Notifications.
+
+Do not expose private notification credentials.
+
+Create:
+
+notificationService.ts
+
+The architecture must support push notification tokens per user.
+
+==========================================================
+28. MULTI-LANGUAGE
+==========================================================
+
+Keep the existing language system.
+
+Languages:
+
+English
+French
+Arabic
+
+All new backend-related UI text must also be translated.
+
+Add translations for:
+
+message sent
+message failed
+uploading
+upload complete
+incoming call
+outgoing call
+missed call
+friend request
+friend request accepted
+online
+offline
+typing
+read
+delivered
+permissions
+camera
+microphone
+storage
+location
+
+Arabic must remain RTL.
+
+==========================================================
+29. DARK / LIGHT MODE
+==========================================================
+
+Do not change the existing Wchat theme.
+
+All new components must support:
+
+Dark Mode
+
+and
+
+Light Mode.
+
+Do not hard-code colors.
+
+Use the existing centralized theme system.
+
+==========================================================
+30. ERROR HANDLING
+==========================================================
+
+Implement proper error handling.
+
+Examples:
+
+No internet
+Socket disconnected
+Supabase error
+Upload failed
+Authentication expired
+Message failed
+Call failed
+Permission denied
+Invalid file
+Invalid phone
+User not found
+
+Display user-friendly messages.
+
+Never expose raw server errors to the user.
+
+==========================================================
+31. OFFLINE / RECONNECTION
+==========================================================
+
+Socket.IO must automatically reconnect when possible.
+
+Show connection status when appropriate:
+
+Connected
+Connecting...
+Offline
+
+Messages that fail because of temporary network problems should have a retry mechanism.
+
+Do not create duplicate messages after reconnection.
+
+==========================================================
+32. SERVER PROJECT STRUCTURE
+==========================================================
+
+Create a separate backend folder.
+
+Example:
+
+Wchat-App/
+
+  expo-wchat/
+
+  server/
+
+    src/
+      config/
+      middleware/
+      routes/
+      controllers/
+      services/
+      socket/
+      jobs/
+      types/
+      utils/
+      server.ts
+
+    package.json
+    tsconfig.json
+    .env.example
+
+  supabase/
+    migrations/
+
+  README.md
+
+The mobile app and backend must remain separate projects.
+
+==========================================================
+33. NODE.JS SERVER
+==========================================================
+
+Create:
+
+Express server
+
+Socket.IO server
+
+CORS configuration
+
+Authentication middleware
+
+Socket authentication middleware
+
+Supabase server client
+
+Health endpoint:
+
+GET /health
+
+Response:
+
+{
+  "status": "ok"
+}
+
+The server should be configurable using:
+
+PORT
+SUPABASE_URL
+SUPABASE_SERVICE_ROLE_KEY
+CLIENT_URL
+
+Never commit .env.
+
+==========================================================
+34. SOCKET AUTHENTICATION
+==========================================================
+
+The React Native application must provide the Supabase access token when connecting to Socket.IO.
+
+The Node.js server must verify the token.
+
+Do NOT trust a user ID sent directly from the client.
+
+The authenticated user identity must come from the verified Supabase token.
+
+Example concept:
+
+socket.handshake.auth.token
+
+Server verifies it.
+
+Then:
+
+socket.user.id
+
+becomes the trusted identity.
+
+==========================================================
+35. DATABASE SECURITY
+==========================================================
+
+Never allow the React Native application to bypass authorization.
+
+The server must verify:
+
+user identity
+chat membership
+message ownership
+friendship permissions
+
+before sensitive operations.
+
+Supabase RLS must also remain enabled.
+
+Use defense in depth.
+
+==========================================================
+36. API STRUCTURE
+==========================================================
+
+Create REST endpoints where appropriate.
+
+Examples:
+
+GET /health
+
+GET /api/profile
+
+PATCH /api/profile
+
+GET /api/users/search
+
+POST /api/friends/request
+
+POST /api/friends/accept
+
+GET /api/friends
+
+GET /api/chats
+
+POST /api/chats
+
+GET /api/chats/:id/messages
+
+POST /api/upload/sign
+
+Do not unnecessarily duplicate real-time operations with REST.
+
+Use Socket.IO for real-time events.
+
+==========================================================
+37. FRONTEND SERVICES
+==========================================================
+
+Create or update:
+
+supabaseClient.ts
+
+authService.ts
+
+profileService.ts
+
+friendService.ts
+
+chatService.ts
+
+messageService.ts
+
+storageService.ts
+
+socketService.ts
+
+notificationService.ts
+
+voiceService.ts
+
+callService.ts
+
+webrtcService.ts
+
+locationService.ts
+
+Keep business logic OUT of UI components where possible.
+
+==========================================================
+38. STATE MANAGEMENT
+==========================================================
+
+Use a clean state management approach.
+
+You may use:
+
+React Context
+
+or
+
+Zustand
+
+Do not introduce Redux unless necessary.
+
+The application should have global state for:
+
+authentication
+current user
+theme
+language
+socket connection
+chats
+unread counts
+online users
+active conversation
+notifications
+
+==========================================================
+39. CHAT CACHING
+==========================================================
+
+Do not download the entire message history every time the user opens a conversation.
+
+Implement pagination.
+
+For example:
+
+20 or 30 messages per page.
+
+Load older messages when scrolling upward.
+
+==========================================================
+40. MESSAGE EXPIRATION
+==========================================================
+
+The frontend should never display messages where:
+
+expires_at < current_time
+
+The backend cleanup system must remove expired messages.
+
+When a user opens an old conversation, expired messages must not reappear.
+
+==========================================================
+41. GROUP CHAT
+==========================================================
+
+Make the existing group functionality real.
+
+Users can:
+
+create group
+set group name
+set group avatar
+add members
+remove members if admin
+leave group
+send messages
+send attachments
+see members
+
+Socket.IO rooms should support group chats.
+
+Example:
+
+chat:<groupId>
+
+==========================================================
+42. NOTIFICATIONS
+==========================================================
+
+Implement notification architecture for:
+
+new message
+friend request
+friend request accepted
+group invitation
+incoming call
+
+Unread notification count should appear in the UI.
+
+==========================================================
+43. PERFORMANCE
+==========================================================
+
+Optimize:
+
+FlatList
+message rendering
+avatars
+images
+Socket.IO listeners
+database queries
+
+Do not create duplicate Socket.IO listeners when navigating between screens.
+
+Clean up listeners correctly.
+
+Example:
+
+return () => socket.off(...)
+
+Avoid memory leaks.
+
+==========================================================
+44. IMPORTANT — DO NOT BREAK EXISTING FRONTEND
+==========================================================
+
+This is critical.
+
+Preserve the existing Wchat frontend design.
+
+Do not:
+
+rename Wchat
+replace the purple/black design
+remove screens
+remove language support
+remove Arabic RTL
+remove dark/light mode
+remove navigation
+replace React Native with React web
+convert the project to HTML
+create a new unrelated application
+
+Modify the existing code where possible.
+
+Only add or refactor what is necessary.
+
+==========================================================
+45. ENVIRONMENT VARIABLES
+==========================================================
+
+Create:
+
+expo-wchat/.env.example
+
+Example:
+
+EXPO_PUBLIC_SUPABASE_URL=
+EXPO_PUBLIC_SUPABASE_ANON_KEY=
+EXPO_PUBLIC_SOCKET_URL=
+
+Server:
+
+server/.env.example
+
+Example:
+
+PORT=4000
+SUPABASE_URL=
+SUPABASE_SERVICE_ROLE_KEY=
+CLIENT_URL=
+JWT_SECRET=
+
+Never place actual credentials in the generated source code.
+
+==========================================================
+46. LOCAL DEVELOPMENT
+==========================================================
+
+The final project should support:
+
+Mobile:
+
+cd expo-wchat
+
+npm install
+
+npx expo start
+
+Backend:
+
+cd server
+
+npm install
+
+npm run dev
+
+The mobile application should connect to the local Node.js server.
+
+Remember:
+
+A physical Android phone cannot normally access:
+
+localhost:4000
+
+on the development computer.
+
+Use the computer's LAN IP address for development.
+
+For example:
+
+EXPO_PUBLIC_SOCKET_URL=http://192.168.x.x:4000
+
+Document this clearly.
+
+==========================================================
+47. PRODUCTION DEPLOYMENT
+==========================================================
+
+Prepare the architecture for deployment later.
+
+Possible backend platforms:
+
+Render
+Railway
+Fly.io
+AWS
+
+Do not deploy automatically.
+
+Provide deployment instructions.
+
+Supabase remains the production database/auth/storage platform.
+
+The mobile app should eventually use:
+
+https://your-api-domain.com
+
+for Socket.IO/API.
+
+==========================================================
+48. TESTING
+==========================================================
+
+Create basic tests or at minimum provide a manual testing checklist.
+
+Test:
+
+Sign up
+Login
+Logout
+Profile
+Search users
+Friend request
+Accept request
+Create chat
+Send message
+Receive real-time message
+Typing indicator
+Online status
+Read receipt
+Upload image
+Upload PDF
+Voice message
+Group chat
+Notifications
+24-hour expiration
+Voice call
+Video call
+Language switching
+Arabic RTL
+Dark mode
+Light mode
+Socket reconnection
+
+==========================================================
+49. README
+==========================================================
+
+Create a detailed README.md explaining:
+
+Project architecture
+
+Frontend setup
+
+Backend setup
+
+Supabase setup
+
+Database migration
+
+Storage buckets
+
+Environment variables
+
+Running locally
+
+Android testing
+
+LAN configuration
+
+Socket.IO architecture
+
+Authentication
+
+WebRTC setup
+
+Expo development build requirements if necessary
+
+Production deployment
+
+Security notes
+
+Troubleshooting
+
+==========================================================
+50. SUPABASE SETUP INSTRUCTIONS
+==========================================================
+
+Generate SQL migrations that I can copy directly into the Supabase SQL Editor.
+
+Include:
+
+tables
+indexes
+foreign keys
+constraints
+RLS policies
+storage policies
+functions if needed
+
+Explain the order in which I should run them.
+
+==========================================================
+51. DO NOT HIDE IMPORTANT CODE
+==========================================================
+
+Do not give me pseudocode for the core functionality.
+
+I need actual implementation code.
+
+Do not write:
+
+"implement this later"
+
+for:
+
+authentication
+database
+Socket.IO messaging
+friend system
+chat persistence
+message sending
+
+Those must be implemented.
+
+For WebRTC, if Expo's current environment requires a development build/native module, implement the signaling architecture and clearly separate the native WebRTC adapter.
+
+==========================================================
+52. FINAL RESPONSE
+==========================================================
+
+When finished, give me:
+
+1. Updated project architecture.
+
+2. Complete list of files created/modified.
+
+3. Supabase SQL migrations.
+
+4. Frontend environment variables.
+
+5. Backend environment variables.
+
+6. Node.js server setup.
+
+7. Supabase setup instructions.
+
+8. Commands to install dependencies.
+
+9. Commands to start the Node.js server.
+
+10. Commands to start Expo.
+
+11. Android testing instructions.
+
+12. WebRTC requirements.
+
+13. Explanation of how real-time messaging works.
+
+14. Explanation of how 24-hour deletion works.
+
+15. Explanation of security architecture.
+
+16. Manual testing checklist.
+
+IMPORTANT:
+
+Do not simply describe what should be done.
+
+Actually implement the second phase in the existing Wchat project.
+
+The final result must be a functional real-time messaging application, while preserving the existing Wchat frontend design.
+
+Start by inspecting the existing project structure and package.json before modifying anything.
+
+If you detect dependency/version conflicts, DO NOT randomly upgrade packages.
+
+Respect the existing Expo SDK and React Native versions and install compatible versions using:
+
+npx expo install
+
+where appropriate.
+
+Do not introduce Vite, React web, Next.js, or unrelated frontend frameworks.
+
+This is a React Native mobile application.

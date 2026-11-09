@@ -13,6 +13,8 @@ import { useTheme } from '../context/ThemeContext';
 import { SearchBar } from '../components/SearchBar';
 import { Avatar } from '../components/Avatar';
 import { MOCK_USERS } from '../constants/mockData';
+import { profileService } from '../services/profileService';
+import { chatService } from '../services/chatService';
 
 interface NewMessageScreenProps {
   onNavigate: (screen: string) => void;
@@ -24,9 +26,24 @@ export const NewMessageScreen: React.FC<NewMessageScreenProps> = ({ onNavigate }
   const { isDark } = useTheme();
 
   const [query, setQuery] = useState('');
+  const [remoteUsers, setRemoteUsers] = useState<typeof MOCK_USERS>([]);
 
-  // Filtered users
-  const filteredUsers = MOCK_USERS.filter(u => {
+  // Search local + remote users
+  React.useEffect(() => {
+    if (query.trim().length > 1) {
+      profileService.searchUsers(query.trim()).then(users => {
+        if (users.length > 0) {
+          setRemoteUsers(users as any);
+        }
+      });
+    } else {
+      setRemoteUsers([]);
+    }
+  }, [query]);
+
+  // Combine and deduplicate users
+  const sourceUsers = remoteUsers.length > 0 ? remoteUsers : MOCK_USERS;
+  const filteredUsers = sourceUsers.filter(u => {
     const q = query.toLowerCase();
     return (
       u.name.toLowerCase().includes(q) ||
@@ -35,7 +52,7 @@ export const NewMessageScreen: React.FC<NewMessageScreenProps> = ({ onNavigate }
     );
   });
 
-  const handleStartConversation = (user: typeof MOCK_USERS[0]) => {
+  const handleStartConversation = async (user: typeof MOCK_USERS[0]) => {
     // Check if chat already exists
     const existing = chats.find(
       c => c.type === 'direct' && c.participantIds.includes(user.id)
@@ -43,7 +60,8 @@ export const NewMessageScreen: React.FC<NewMessageScreenProps> = ({ onNavigate }
     if (existing) {
       setActiveChatId(existing.id);
     } else {
-      setActiveChatId('chat_1'); // fallback to mock chat
+      const newChatId = await chatService.createPrivateChat(user.id);
+      setActiveChatId(newChatId || 'chat_1');
     }
     onNavigate('conversation');
   };

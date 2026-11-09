@@ -18,6 +18,9 @@ import { MessageBubble } from '../components/MessageBubble';
 import { Avatar } from '../components/Avatar';
 import { AttachmentSheet } from '../components/AttachmentSheet';
 import { MOCK_USERS } from '../constants/mockData';
+import { voiceService } from '../services/voiceService';
+import { locationService } from '../services/locationService';
+import { chatService } from '../services/chatService';
 
 interface ChatConversationScreenProps {
   onNavigate: (screen: string) => void;
@@ -86,34 +89,42 @@ export const ChatConversationScreen: React.FC<ChatConversationScreenProps> = ({ 
     e?.preventDefault();
     if (!inputText.trim() || !activeChatId) return;
 
+    chatService.emitTyping(activeChatId, false, partnerUser.name);
     sendMessage(activeChatId, inputText.trim());
     setInputText('');
   };
 
-  const handleVoiceRecordToggle = () => {
+  const handleVoiceRecordToggle = async () => {
     if (!activeChatId) return;
 
     if (!isRecordingVoice) {
-      // Start recording
       setIsRecordingVoice(true);
+      await voiceService.startRecording();
     } else {
-      // Stop and send voice note
       setIsRecordingVoice(false);
-      const formattedDuration = `0:${recordingSeconds < 10 ? '0' : ''}${Math.max(1, recordingSeconds)}`;
-      sendVoiceMessage(activeChatId, formattedDuration);
+      const { audioUrl, duration, waveform } = await voiceService.stopRecording(activeChatId);
+      sendVoiceMessage(activeChatId, duration, waveform, audioUrl);
     }
   };
 
-  const handleAttachmentOption = (
+  const handleAttachmentOption = async (
     type: 'photo' | 'camera' | 'document' | 'pdf' | 'audio' | 'location'
   ) => {
     if (!activeChatId) return;
 
-    if (type === 'photo' || type === 'camera') {
+    if (type === 'location') {
+      const loc = await locationService.getCurrentLocation();
+      sendAttachment(
+        activeChatId,
+        'location',
+        `📍 ${loc.address || 'Shared Location'} (${loc.latitude.toFixed(4)}, ${loc.longitude.toFixed(4)})`,
+        loc.mapsUrl
+      );
+    } else if (type === 'photo' || type === 'camera') {
       sendAttachment(
         activeChatId,
         'image',
-        'Shared media',
+        'Shared photo',
         'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=600&q=80'
       );
     } else if (type === 'pdf' || type === 'document') {
@@ -124,10 +135,8 @@ export const ChatConversationScreen: React.FC<ChatConversationScreenProps> = ({ 
         undefined,
         'Project_Brief_2025.pdf'
       );
-    } else if (type === 'location') {
-      sendAttachment(activeChatId, 'location', 'Paris, France (Live GPS)');
     } else if (type === 'audio') {
-      sendVoiceMessage(activeChatId, '0:24');
+      sendVoiceMessage(activeChatId, '0:18');
     }
   };
 

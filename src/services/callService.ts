@@ -1,32 +1,39 @@
-/**
- * @file callService.ts
- * Future Backend Integration: WebRTC peer-to-peer audio/video calling
- * Ready for:
- * - Signaling via Socket.IO (offer, answer, ice-candidate)
- * - RTCPeerConnection / react-native-webrtc
- * - STUN/TURN servers
- */
-
 import { User } from '../types';
+import { webrtcService } from './webrtcService';
 
 export const callService = {
-  initiateCall(recipient: User, callType: 'voice' | 'video') {
-    console.log('[callService] WebRTC offer initiated to:', recipient.name, callType);
+  initiateCall(
+    recipient: User,
+    callType: 'voice' | 'video',
+    chatId: string,
+    onRemoteStream?: (stream: MediaStream) => void,
+    onCallEnded?: () => void
+  ) {
+    console.log(`[callService] Initiating ${callType} call to ${recipient.name} (${recipient.id})`);
+    webrtcService.startCall(
+      recipient.id,
+      chatId,
+      callType,
+      onRemoteStream || (() => {}),
+      onCallEnded || (() => {})
+    );
   },
 
-  acceptCall(callId: string) {
-    console.log('[callService] WebRTC call accepted:', callId);
+  acceptCall(callerId: string, chatId: string, callType: 'voice' | 'video', remoteSdp?: any) {
+    console.log(`[callService] Accepting call from ${callerId}`);
+    webrtcService.answerCall(callerId, chatId, callType, remoteSdp);
   },
 
-  endCall(callId: string) {
-    console.log('[callService] WebRTC call terminated:', callId);
+  endCall(targetUserId?: string, chatId?: string) {
+    console.log('[callService] Terminating active call');
+    webrtcService.endCall(targetUserId, chatId);
   },
 
-  toggleAudio(muted: boolean) {
-    console.log('[callService] WebRTC local audio track enabled:', !muted);
+  toggleMute(muted: boolean) {
+    webrtcService.toggleMute(muted);
   },
 
   toggleVideo(enabled: boolean) {
-    console.log('[callService] WebRTC local video track enabled:', enabled);
+    webrtcService.toggleVideo(enabled);
   },
 };

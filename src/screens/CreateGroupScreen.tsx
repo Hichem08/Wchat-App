@@ -32,11 +32,11 @@ export const CreateGroupScreen: React.FC<CreateGroupScreenProps> = ({ onNavigate
     );
   };
 
-  const handleCreate = (e: React.FormEvent) => {
+  const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!groupName.trim()) return;
 
-    const newGroup = createGroup(groupName, description, selectedUserIds, groupAvatar);
+    const newGroup = await createGroup(groupName, description, selectedUserIds, groupAvatar);
     setActiveChatId(newGroup.id);
     setActiveTab('groups');
     onNavigate('conversation');
